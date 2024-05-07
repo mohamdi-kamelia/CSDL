@@ -3,7 +3,7 @@
 #include "menu.hpp"
 #include <fstream>
 
-typedef enum GameScreen {menu, game} GameScreen;
+typedef enum GameScreen {menu, game, save} GameScreen;
 
 const int screenWidth = 1600;
 const int screenHeight = 1200;
@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
     GameScreen currentScreen = menu;
     
     InitWindow(screenWidth, screenHeight, "Game of life");
-    SetTargetFPS(10);
+    SetTargetFPS(60);
 
     bool currentGen[rows][cols] = { false };
     bool nextGen[rows][cols] = { false };    
@@ -163,17 +163,20 @@ int main(int argc, char* argv[])
                     currentScreen = game;
                 }
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)&& GetMousePosition().x > buttonX && GetMousePosition().x < buttonWidth && GetMousePosition().y > 450 && GetMousePosition().y < (450 +buttonHeight))
-                {
-                    saveCurrentPopulation(currentGen, "population.txt");
+                {                        
+                    currentScreen = save;               
                 }
+
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)&& GetMousePosition().x > buttonX && GetMousePosition().x < buttonWidth && GetMousePosition().y > 575 && GetMousePosition().y < (575 +buttonHeight))
                 {
                     loadPopulation(currentGen, "population.txt");
                 } 
 
             } break;
+
             case game:
             {
+                SetTargetFPS(10);
                 ClearBackground(darkGreen);
 
                 for (int i = 0; i < rows; ++i) {
@@ -196,7 +199,39 @@ int main(int argc, char* argv[])
                 {
                     currentScreen = menu;
                 }
-            } break;                
+            } break;
+
+            case save:
+                static std::string populationName;
+                int key = GetCharPressed();
+
+                DrawText("Entrez le nom de la population : ", 200, 775, 50, white);
+
+                DrawRectangleLines(buttonX, 875, buttonWidth, buttonHeight, white);
+                DrawText(populationName.c_str(), 200, 900, 50, white);
+
+                DrawRectangleLines(buttonX, 1000, buttonWidth, buttonHeight, white);
+                DrawText("Valider", 200, 1025, 50, white);
+                
+                if (key >= 32 && key <= 125)                    
+                {
+                    char character = static_cast<char>(key);
+                    populationName += character;
+                }
+                
+                if (IsKeyPressed(KEY_BACKSPACE) && !populationName.empty())
+                {
+                    populationName.pop_back();                        
+                }
+                
+                DrawRectangle(200, 900, 800, 50, darkGreen);
+                DrawText(populationName.c_str(), 200, 900, 50, white);
+                
+                if ((IsMouseButtonPressed(MOUSE_BUTTON_LEFT)&& GetMousePosition().x > buttonX && GetMousePosition().x < buttonWidth && GetMousePosition().y > 1025 && GetMousePosition().y < (1025 +buttonHeight)) || IsKeyPressed(KEY_ENTER))
+                {
+                    saveCurrentPopulation(currentGen, populationName + ".txt");
+                    currentScreen = menu;
+                } break;                
     }
 
 
