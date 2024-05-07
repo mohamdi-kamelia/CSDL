@@ -1,8 +1,7 @@
 #include <raylib.h>
 #include <iostream>
 #include "menu.hpp"
-#include <thread>
-#include <chrono>
+#include <fstream>
 
 typedef enum GameScreen {menu, game} GameScreen;
 
@@ -12,19 +11,17 @@ const int screenHeight = 1200;
 // Function to count alive neighbors of a cell
 int countLiveNeighbors(bool grid[][cols], int x, int y) {
     int count = 0;
+
     for (int i = -1; i <= 1; ++i) {
         for (int j = -1; j <= 1; ++j) {
-            // Calculate neighbor position with wrapping
             int neighborX = x + i;
             int neighborY = y + j;
-            // Check if neighbor is alive
-            if (grid[neighborX][neighborY]) {
 
+            if (grid[neighborX][neighborY]) {
                 count++;
             }
         }
     }
-    // Exclude the current cell
     if (grid[x][y]) {
         count--;
     }
@@ -34,31 +31,59 @@ int countLiveNeighbors(bool grid[][cols], int x, int y) {
 // Function to apply the rules and generate the next grid
 void applyRules(bool currentGen[][cols], bool nextGen[][cols]) {
     for (int i = 0; i < rows; ++i) {
-    for (int j = 0; j < cols; ++j) {
-        // Calculate the position of the cell in screen coordinates
-        int posX = j * cellSize;
-        int posY = i * cellSize;
+        for (int j = 0; j < cols; ++j) {
+            // Calculate the position of the cell in screen coordinates
+            int posX = j * cellSize;
+            int posY = i * cellSize;
 
-        // Check if the cell is outside the bounds of the screen
-        if (posX < 0 || posX >= screenWidth || posY < 0 || posY >= screenHeight) {
-            nextGen[i][j] = false; // Set the cell to dead
-        } else {
-            // Otherwise, apply Conway's rules as usual
+            // Check if the cell is outside the bounds of the screen
+            if (posX < 0 || posX >= screenWidth || posY < 0 || posY >= screenHeight) {
+                nextGen[i][j] = false; // Set the cell to dead
+            } else {
+            // Otherwise, apply rules
             int liveNeighbors = countLiveNeighbors(currentGen, i, j);
             if (currentGen[i][j]) {
-                // Any live cell with fewer than two live neighbors dies
-                // Any live cell with more than three live neighbors dies
                 nextGen[i][j] = (liveNeighbors == 2 || liveNeighbors == 3);
             } else {
-                // Any dead cell with exactly three live neighbors becomes a live cell
                 nextGen[i][j] = (liveNeighbors == 3);
+            }
             }
         }
     }
 }
+
+void saveCurrentPopulation(bool currentGen[][cols], std::string filename) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: could not open file " << filename << std::endl;
+    }
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            file << currentGen[i][j];
+        }
+        file << std::endl;
+    }
+    file.close();
+    std::cout << "Population saved to file " << filename << std::endl;
 }
 
-int main()
+void loadPopulation(bool currentGen[][cols], std::string filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: could not open file " << filename << std::endl;
+    }
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            char cell;
+            file >> cell;
+            currentGen[i][j] = (cell == '1');
+        }
+    }
+    file.close();
+    std::cout << "Population loaded from file " << filename << std::endl;
+}
+
+int main(int argc, char* argv[])
 {
     Color darkGreen = Color{20, 160, 133, 255};
     Color white = Color{255, 255, 255, 255};
@@ -70,7 +95,7 @@ int main()
     GameScreen currentScreen = menu;
     
     InitWindow(screenWidth, screenHeight, "Game of life");
-    SetTargetFPS(120);
+    SetTargetFPS(10);
 
     bool currentGen[rows][cols] = { false };
     bool nextGen[rows][cols] = { false };    
@@ -126,15 +151,26 @@ int main()
                 DrawRectangleLines(buttonX, 200, buttonWidth, buttonHeight, white);
                 DrawRectangleLines(buttonX, 325, buttonWidth, buttonHeight, white);
                 DrawRectangleLines(buttonX, 450, buttonWidth, buttonHeight, white);
+                DrawRectangleLines(buttonX, 575, buttonWidth, buttonHeight, white);
                 DrawText("Lancer le jeu",200, 100, 50, white);
                 DrawText("Générer population aléatoire", 200, 225, 50, white);
                 DrawText("Lancement population par défaut", 200, 350, 50, white);
                 DrawText("Sauvegarder Population courante", 200, 475, 50, white);
+                DrawText("Charger Population", 200, 600, 50, white);
 
                 if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)&& GetMousePosition().x > buttonX && GetMousePosition().x < buttonWidth && GetMousePosition().y > 75 && GetMousePosition().y < (75 +buttonHeight))
                 {
                     currentScreen = game;
                 }
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)&& GetMousePosition().x > buttonX && GetMousePosition().x < buttonWidth && GetMousePosition().y > 450 && GetMousePosition().y < (450 +buttonHeight))
+                {
+                    saveCurrentPopulation(currentGen, "population.txt");
+                }
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)&& GetMousePosition().x > buttonX && GetMousePosition().x < buttonWidth && GetMousePosition().y > 575 && GetMousePosition().y < (575 +buttonHeight))
+                {
+                    loadPopulation(currentGen, "population.txt");
+                } 
+
             } break;
             case game:
             {
@@ -154,8 +190,6 @@ int main()
                 applyRules(currentGen, nextGen);
 
                 std::swap(currentGen, nextGen);
-
-                //std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
 
                 if (IsKeyPressed(KEY_SPACE))
