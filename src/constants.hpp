@@ -2,7 +2,7 @@
 #define MENU_HPP
 
 const int screenWidth = 1600;
-const int screenHeight = 1200;
+const int screenHeight = 900;
 
 const int buttonX = 100;
 const int buttonWidth = 1400;
